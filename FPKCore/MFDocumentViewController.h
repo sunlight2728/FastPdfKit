@@ -12,6 +12,7 @@
 #import "FPKOverlayViewDataSource.h"
 #import "FPKThumbnailDataStore.h"
 #import "FPKSharedSettings.h"
+#import "FPKDestination.h"
 
 @class MFDeferredContentLayerWrapper;
 @class MFDocumentManager;
@@ -65,8 +66,7 @@ static const NSUInteger FPKEmbeddedAnnotationsAll = FPKEmbeddedAnnotationsAudio|
 /**
  This property let you add the main DocumentViewControllerDelegate.
  */
-
-@property (weak) NSObject<MFDocumentViewControllerDelegate> *documentDelegate;
+@property (weak) id<MFDocumentViewControllerDelegate> documentDelegate;
 
 /**
  If you need to register objects as DocumentViewControllerDelegate you can add them using this method.
@@ -256,9 +256,16 @@ static const NSUInteger FPKEmbeddedAnnotationsAll = FPKEmbeddedAnnotationsAudio|
 
 /**
  Call this method to start working with the pdf.
+ @param aDocumentManager The MFDocumentManager to use.
  */
-
 -(id)initWithDocumentManager:(MFDocumentManager *)aDocumentManager;
+
+/**
+ Call this method to start working with the pdf.
+ @param aDocumentManager The MFDocumentManager to use.
+ @param count Max amount of concurrent operations. Pass 0 to set it to an automatic value.
+ */
+-(id)initWithDocumentManager:(MFDocumentManager *)aDocumentManager count:(NSUInteger)count;
 
 /**
  This metod enable or disable the automatic mode switching upon rotation. If 
@@ -309,6 +316,13 @@ static const NSUInteger FPKEmbeddedAnnotationsAll = FPKEmbeddedAnnotationsAudio|
  rectangle on screen. 
  */
 -(void)setPage:(NSUInteger)page withZoomOfLevel:(float)zoomLevel onRect:(CGRect)rect;
+
+/**
+ * Will attemp to reach the destination.
+ * It will return YES if the destination has been found on the current document,
+ * otherwise NO.
+ */
+-(BOOL)setDestination:(id<FPKDestination>)destination;
 
 /**
  Returns the current page of the document.
@@ -575,6 +589,7 @@ static const NSUInteger FPKEmbeddedAnnotationsAll = FPKEmbeddedAnnotationsAudio|
  *
  * Default is 0.05.
  */
+
 -(void)setImageCacheOversize:(CGFloat)oversize;
 -(CGFloat)imageCacheOversize;
 
@@ -604,18 +619,6 @@ static const NSUInteger FPKEmbeddedAnnotationsAll = FPKEmbeddedAnnotationsAudio|
  * Toolbar. It will return nil if useNavigationToolbar has been set to YES.
  */
 @property (strong, nonatomic) UIToolbar * toolbar;
-
-/**
- * This will return the default toolbar background image. It is a resizable a
- * resizable image.
- */
-+(UIImage *)defaultToolbarBackgroundImage;
-
-/**
- * This is the resizable image used as background for both the embedded navigation
- * bar and the bottom toolbar. If not set will use the defaultToolbarBackgroundImage.
- */
-@property (strong, nonatomic) UIImage * toolbarBackgroundImage;
 
 /**
  * Invoked when the user cancel the page slider movement by touching up outside

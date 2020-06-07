@@ -45,4 +45,25 @@
  */
 @property (readwrite, nonatomic) FPKForceTiles forceTiles;
 
+/**
+ * If true, high-res images are enabled. Default true.
+ */
+@property (readwrite, nonatomic) BOOL foregroundEnabled;
+
+/**
+ If true, an extra step of resolution in background resources is used. Default to false.
+ */
+@property (readwrite, nonatomic) BOOL highResolutionBackgroundEnabled;
+
+/**
+ Scaling factor for the high resolution background images. Default to 2.0. Accepted values are between 1.0 and 4.0. Avoid values higher than 2.0.
+ */
+@property (readwrite, nonatomic) CGFloat highResolutionBackgroundScale;
+
+/**
+ If true, background images will use only the data already rendered for the
+ thumbnails.
+ */
+@property (readwrite, nonatomic) BOOL disableCacheImageRendering;
+
 @end

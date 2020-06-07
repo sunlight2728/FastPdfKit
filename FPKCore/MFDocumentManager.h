@@ -24,10 +24,6 @@
     NSString * resourceFolder;  /* If nil, will default to Documents folder */
 	
 	NSUInteger numberOfPages;
-	
-	int *dataSetFlags;
-	CGRect *cropboxes;
-	int *rotations;
     
     NSMutableDictionary * fontCache;
     
@@ -86,13 +82,22 @@ Convert a CGRect from iOS view space to a PDF page coordinate space.
 -(void)drawPageNumber:(NSInteger)pageNumber onContext:(CGContextRef)ctx;
 
 /**
- Use this method to get the cropbox and the rotation of a certain pdf page.
+ Use this method to get the cropbox and the rotation of a page.
  */
 -(void)getCropbox:(CGRect *)cropbox andRotation:(int *)rotation forPageNumber:(NSInteger)pageNumber withBuffer:(BOOL)withOrWithout;
 
 /**
+ * Same as -getCropbox:andRotation:forPageNumber:withBuffer: with the last parameter passed as NO.
+ * Actually, since the parent method ignores the withBuffer parameter, it behaves the same.
+ */
+-(void)getCropbox:(CGRect *)cropbox
+      andRotation:(int *)rotation
+    forPageNumber:(NSInteger)pageNumber;
+
+/**
  Create a thumbnail for a specific page. It will look far better than the 
  thumbnail integrated inside the pdf, but it is also slower.
+ @return The page thumbnail.
  */
 -(CGImageRef)createImageForThumbnailOfPageNumber:(NSUInteger)pageNr ofSize:(CGSize)size andScale:(CGFloat)scale;
 
@@ -103,13 +108,22 @@ Convert a CGRect from iOS view space to a PDF page coordinate space.
 
 /** 
  Return an array of MFOutlineEntry as the outline/TOC of the pdf document.
+ @return The TOC as an array of outline entries.
  */
 -(NSMutableArray *)outline;
 
 /**
- Initializer. You can also use the factory method above. 
+ Initialize the document with a pdf file.
+ @param anUrl The pdf file URL.
  */
 -(id)initWithFileUrl:(NSURL*)anUrl;
+
+/**
+ Initialize the document with a pdf file.
+ @param anUrl The pdf file URL.
+ @param count Amount of concurrent document copies. Pass 0 to let the system choose the appropriate value.
+ */
+-(id)initWithFileUrl:(NSURL *)anUrl count:(NSUInteger)count;
 
 /**
  Initializer with data provider.
@@ -118,23 +132,29 @@ Convert a CGRect from iOS view space to a PDF page coordinate space.
 	
 /** 
  Check if a document is encrypted and blocked by a password or not.
+ @return If the document is password protected.
  */
 -(BOOL)isLocked;
 
 /**
  Try to unlock the document with a password and return if the unlock has been 
  successful or not.
+ @param password The password.
+ @return If the document is unlocked or not.
 */
--(BOOL)tryUnlockWithPassword:(NSString *)aPassword;
+-(BOOL)tryUnlockWithPassword:(NSString *)password;
 
 /** 
  Return the number of pages that make up the document.
+ @return The number of pages.
  */
 -(NSUInteger)numberOfPages;
 
 /**
  This method will return the page number of the destination with the name passed 
  as argument.
+ @param name The name of the destination.
+ @return The page number or 0 if no destination with such name is found.
  */
 -(NSUInteger)pageNumberForDestinationNamed:(NSString *)name;
 
@@ -145,27 +165,40 @@ Convert a CGRect from iOS view space to a PDF page coordinate space.
  */
 -(void)emptyCache;
 
-/**
- * Return an array of MFTextItem representing the matches of teh search term on 
- * the page passed as arguments. It is a good idea running this method in a 
- * secondary thread.
- *
- * mode is of type FPKSearchMode and has the following values:
- * FPKSearchModeHard - if you search for 'bèzier' it will match 'bèzier' only 
- * but not 'bezier'. If you search for 'bezier' it will match 'bezier' only.
- * FPKSearchModeSoft - if you search for term 'bèzier' it will match both 
- * 'bezier' and 'bèzier'. Same if you search for 'bezier'.
- * FPKSearchModeSmart - if you search for term 'bezier', it will also match 
- * 'bèzier', but if you search for 'bèzier' it will match 'bèzier' only.
- *
- * ignoreOrNot tell the function if it should ignore case or not.
- *
- * exactMatchOrNot tell the function if it should match the term as a whole or 
- * search for each component separated by spaces.
- *
- * Default parameters are FPKSearchModeSmart, ignoreCase to YES and exactMatch 
- * to NO.
+/*!
+ Return an array of MFTextItem representing the matches of teh search term on
+ the page passed as arguments. It is a good idea running this method in a
+ secondary thread.
+ 
+ @param mode is of type FPKSearchMode and has the following values:
+ FPKSearchModeHard - if you search for 'bèzier' it will match 'bèzier' only
+ but not 'bezier'. If you search for 'bezier' it will match 'bezier' only.
+ FPKSearchModeSoft - if you search for term 'bèzier' it will match both
+ 'bezier' and 'bèzier'. Same if you search for 'bezier'.
+ FPKSearchModeSmart - if you search for term 'bezier', it will also match
+ 'bèzier', but if you search for 'bèzier' it will match 'bèzier' only.
+ 
+ @param ignoreOrNot tell the function if it should ignore case or not.
+ 
+ @param exactMatchOrNot tell the function if it should match the term as a whole or
+ search for each component separated by spaces.
+ 
+ @param pdfCoordinates If set to YES, the coordinates of the MFTextItem will be
+ in PDF Coordinate System (origin on the lower left). If set to NO the coordinates
+ will be in UI interface space, that is origin on the upper left.
+ 
+ Default parameters are FPKSearchModeSmart, ignoreCase to YES, exactMatch
+ to NO and pdfCoordinates to YES.
+ 
+ @return NSArray An array of MFTextItem or nil if no match is found.
  */
+-(NSArray *)searchResultOnPage:(NSUInteger)pageNr
+                forSearchTerms:(NSString *)searchTerm
+                          mode:(FPKSearchMode)mode
+                    ignoreCase:(BOOL)ignoreOrNot
+                    exactMatch:(BOOL)exactMatchOrNot
+                pdfCoordinates:(BOOL)pdfCoordinates;
+
 -(NSArray *)searchResultOnPage:(NSUInteger)pageNr 
                 forSearchTerms:(NSString *)searchTerm 
                           mode:(FPKSearchMode)mode 
@@ -245,8 +278,17 @@ Convert a CGRect from iOS view space to a PDF page coordinate space.
 
 /**
  Tell to keep memory usage down. Use this if you see frequent memory warnings.
+ Default is false.
  */
 @property (readwrite) BOOL conservativeMemoryUsage;
+
+/**
+ Hint used by the kit to determine when the memory pressure is becoming excessive and
+ take action. Only used when conservativeMemoryUsage is true. Is an hint, don't expect 
+ it to be an hard limit.
+ Minimum value is 100 millions of bytes (100 MB). Default value is 250 MB.
+ */
+@property (nonatomic, readwrite) size_t conservativeMemoryUsageHint;
 
 /**
  This will return a Cocoa representation of the annotations array for each page.
